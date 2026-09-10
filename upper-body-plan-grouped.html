@@ -58,6 +58,20 @@ html:not([data-reading="compact"]) .load-help{font-size:var(--read-small);line-h
 html:not([data-reading="compact"]) .load-help summary{min-height:48px}
 html:not([data-reading="compact"]) .warmup{font-size:var(--read-text);line-height:1.5;padding:12px;margin-top:12px;color:#343a29}
 html:not([data-reading="compact"]) .warmup small{font-size:var(--read-small);color:#424d35;line-height:1.5;margin-top:7px}
+.warmup>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;font-size:20px;font-weight:bold;cursor:pointer;list-style:none;color:#3b4228}
+.warmup>summary::-webkit-details-marker{display:none}
+.warmup>summary::after{content:'+';font-size:28px;font-weight:normal}
+.warmup[open]>summary::after{content:'−'}
+.warmup>summary:focus-visible{outline:3px solid #8b6714;outline-offset:3px;border-radius:4px}
+.warmup-content{display:grid;gap:12px;padding-top:12px;border-top:1px solid #dbcfae;margin-top:8px}
+.warmup-step{padding:10px 12px;background:#fffdf7;border:1px solid #e3d7b8;border-radius:8px}
+.warmup-step>b{display:block;color:#5b481b;margin-bottom:6px}
+.warmup-step p{margin:0;line-height:1.5}
+.warmup-notes{margin:0;padding-right:22px;font-size:13px;line-height:1.5;color:#424d35}
+.warmup-notes li{margin:0 0 9px;padding-right:3px}
+.warmup-notes li:last-child{margin-bottom:0}
+html:not([data-reading="compact"]) .warmup>summary{font-size:var(--read-text);min-height:48px}
+html:not([data-reading="compact"]) .warmup-notes{font-size:var(--read-small)}
 html:not([data-reading="compact"]) .figure img{height:clamp(190px,30dvh,300px)}
 html:not([data-reading="compact"]) .phases{font-size:var(--read-small);color:#075e60;padding:6px 0}
 html:not([data-reading="compact"]) .zoom-note{font-size:var(--read-small);color:#345b61}
@@ -163,13 +177,14 @@ function warmupPanel(letter,v){
  if(g===4&&pos===0)count=1;
  if(!count)return '';
  const kg=setLoads(letter,v)[0],round=x=>Math.floor(x*2)/2;
- let steps;
- if(v.load.assisted)steps='1: 6–8 חזרות עם יותר סיוע מהסט הראשון. 2: 3–4 חזרות עם מעט פחות סיוע, עדיין קלות. יותר סיוע מקל; אל תחשב אחוזים ממשקל הסיוע.';
- else if(v.load.sled)steps='1: 6–8 חזרות בעומס ההתחלתי הקל של המכונה. 2: 3–4 חזרות בעומס ביניים לקראת הסט הראשון. אם המשטח הריק כבד, בקש התאמה ממדריך.';
- else if(v.load.bar)steps='1: 6–8 חזרות של תנועת האגן לאחור ללא משקל. 2: 3–5 חזרות במוט קל או במשקולות קלות יותר ממשקל העבודה; אין צורך במוט שאינו זמין.';
- else if(kg===0)steps='5–8 חזרות קלות ללא משקל, בטווח נשלט.';
- else steps=`1: 6–8 חזרות עם כ־${round(kg*.5)} ק״ג${count===2?`. 2: 3–4 חזרות עם כ־${round(kg*.75)} ק״ג`:''}. באותה יחידת משקל של סטי העבודה; בחר את המשקל הזמין הקרוב והקל יותר.`;
- return `<section class="warmup"><b>לפני סטי העבודה · ${count===1?'סט חימום אחד':'2 סטי חימום'}</b><p>${pos===0?'בתחילת האימון: כ־5 דקות תנועה קלה. ':''}${numericText(steps)}</p><small>החימום קל, לא עד כשל ולא נספר בסטי העבודה. נוח עד שאתה מוכן לסט הבא.</small></section>`;
+ let steps=[],notes=[];
+ if(v.load.assisted){steps=['6–8 חזרות עם יותר סיוע מהסט הראשון.','3–4 חזרות עם מעט פחות סיוע, עדיין קלות.'];notes=['יותר סיוע מקל; אל תחשב אחוזים ממשקל הסיוע.'];}
+ else if(v.load.sled){steps=['6–8 חזרות בעומס ההתחלתי הקל של המכונה.','3–4 חזרות בעומס ביניים לקראת הסט הראשון.'];notes=['אם המשטח הריק כבד, בקש התאמה ממדריך.'];}
+ else if(v.load.bar){steps=['6–8 חזרות של תנועת האגן לאחור ללא משקל.','3–5 חזרות במוט קל או במשקולות קלות יותר ממשקל העבודה.'];notes=['אין צורך במוט שאינו זמין.'];}
+ else if(kg===0)steps=['5–8 חזרות קלות ללא משקל, בטווח נשלט.'];
+ else{steps=[`6–8 חזרות עם כ־${round(kg*.5)} ק״ג.`];if(count===2)steps.push(`3–4 חזרות עם כ־${round(kg*.75)} ק״ג.`);notes=['המשקל באותה יחידה של סטי העבודה.','בחר את המשקל הזמין הקרוב והקל יותר.'];}
+ notes.push('החימום קל, לא עד כשל ולא נספר בסטי העבודה.','נוח עד שאתה מוכן לסט הבא.');
+ return `<details class="warmup"><summary>חימום</summary><div class="warmup-content">${pos===0?'<div class="warmup-step"><b>הכנה</b><p>בתחילת האימון: כ־5 דקות תנועה קלה.</p></div>':''}${steps.map((step,i)=>`<div class="warmup-step"><b>סט חימום ${i+1}</b><p>${numericText(step)}</p></div>`).join('')}<ul class="warmup-notes">${notes.map(note=>`<li>${numericText(note)}</li>`).join('')}</ul></div></details>`;
 }
 document.addEventListener('input',event=>{
  if(!event.target.matches('[data-load]'))return;
@@ -180,7 +195,9 @@ document.addEventListener('input',event=>{
  const r=route(),v=DATA.groups[r.group].variants[choice(r.letter,r.group)],values=setLoads(r.letter,v);values[Number(input.dataset.load)]=value;
  loadData[loadKey(r.letter,v)]=values;
  try{localStorage.setItem(loadStoreKey,JSON.stringify(loadData));storageOK=true;state.textContent='נשמר במכשיר ✓';}catch{storageOK=false;state.textContent='לא נשמר — הורד גיבוי';}
+ const warmupWasOpen=document.querySelector('#warmup-area .warmup')?.open;
  document.getElementById('warmup-area').innerHTML=warmupPanel(r.letter,v);
+ const warmup=document.querySelector('#warmup-area .warmup');if(warmup)warmup.open=Boolean(warmupWasOpen);
 });
 let installPrompt=null;
 const settings=document.getElementById('settings');
