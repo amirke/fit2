@@ -92,6 +92,8 @@ html:not([data-reading="compact"]) #close-settings{position:sticky;top:0;z-index
 
 #git-repo,#git-token{width:100%;min-height:48px;font-size:20px;margin:6px 0}#settings label{overflow-wrap:anywhere}#git-public{width:24px;height:24px}
 
+.page-notes{margin-top:28px;padding:18px 0 8px;border-top:2px solid #b6cec8}.page-notes label{display:block;font-size:24px;font-weight:bold;margin-bottom:10px}.page-notes textarea{display:block;width:100%;min-height:140px;resize:vertical;border:2px solid #92b3ab;border-radius:10px;padding:12px;font:inherit;font-size:22px;line-height:1.5;color:#14343d;background:#f7fbfa}.page-notes textarea:focus{outline:3px solid #dba63e;outline-offset:2px}.note-save,.cloud-save{font-size:16px;line-height:1.5;margin-top:8px;overflow-wrap:anywhere}html[data-reading=xl] .page-notes textarea{font-size:26px}
+
 
 </style>
 </head>
@@ -109,7 +111,7 @@ const range=s=>'<bdi dir="ltr">'+escapeHTML(s.replace(/[–־]/g,'-'))+'</bdi>';
 const storeKey='gymWorkoutProgress-v1';
 let saved={done:{},choices:{}};
 try{const parsed=JSON.parse(localStorage.getItem(storeKey));if(parsed?.done&&parsed?.choices)saved=parsed;}catch{}
-function persist(){try{localStorage.setItem(storeKey,JSON.stringify(saved));}catch{}}
+function persist(){try{localStorage.setItem(storeKey,JSON.stringify(saved));scheduleGitBackup();}catch{}}
 function route(){
   const match=location.hash.match(/^#exercise-([ABC])-(\d+)$/);
   if(match){const group=Number(match[2]),letter=match[1];if(DATA.workouts.find(w=>w.letter===letter).rows.some(r=>r[0]===group))return {letter,group};}
@@ -128,7 +130,7 @@ function back(){
 function rowKey(letter,group){return letter+'-'+group;}
 function choice(letter,group){const value=saved.choices[rowKey(letter,group)],g=DATA.groups[group];const id=typeof value==='string'?value:g.legacyIds[Number(value)||0];return Math.max(0,g.variants.findIndex(v=>v.id===id));}
 function repsMarkup(reps){const side=reps.includes('לכל צד'),seconds=reps.includes('שניות');return range(reps.split(' ')[0])+(seconds?'<span class="per-side">שניות</span>':'')+(side?'<span class="per-side">לכל צד</span>':'');}
-function render(){
+function renderScreen(){
   const r=route(),workout=DATA.workouts.find(w=>w.letter===r.letter);
   document.querySelectorAll('header a').forEach(a=>{if(a.hash==='#workout-'+r.letter)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
   if(r.group===null){
@@ -257,7 +259,7 @@ function setReadingMode(mode,save=false){
  readingMode=mode;document.documentElement.dataset.reading=mode;
  document.querySelectorAll('[data-reading-choice]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.readingChoice===mode)));
  if(save){
-  try{localStorage.setItem(readingKey,mode);document.getElementById('reading-status').textContent='גודל הכתב נשמר לפעם הבאה ✓';}
+  try{localStorage.setItem(readingKey,mode);scheduleGitBackup();document.getElementById('reading-status').textContent='גודל הכתב נשמר לפעם הבאה ✓';}
   catch{document.getElementById('reading-status').textContent='גודל הכתב השתנה; השמירה לפעם הבאה אינה זמינה.';}
  }
 }
@@ -269,7 +271,7 @@ const journalKey='gymJournal-v1';
 let journal={version:1,records:{},logs:[],sessions:{}};
 try{const j=JSON.parse(localStorage.getItem(journalKey));if(j?.version===1&&j.records&&Array.isArray(j.logs)&&j.sessions)journal=j;}catch{storageOK=false;}
 function record(letter,v){return journal.records[loadKey(letter,v)]||{unit:'kg',plates:[null,null,null],reps:[null,null,null],done:[false,false,false],edited:false};}
-function saveJournal(){try{localStorage.setItem(journalKey,JSON.stringify(journal));storageOK=true;return true;}catch{storageOK=false;alert('השמירה נכשלה. הנתונים עדיין במסך — הורד גיבוי לפני סגירה.');return false;}}
+function saveJournal(){try{localStorage.setItem(journalKey,JSON.stringify(journal));storageOK=true;scheduleGitBackup();return true;}catch{storageOK=false;alert('השמירה נכשלה. הנתונים עדיין במסך — הורד גיבוי לפני סגירה.');return false;}}
 function unitName(letter,v){return record(letter,v).unit==='plates'?'משקולות במכשיר':v.load.unit;}
 function actualLoads(letter,v){return record(letter,v).unit==='plates'?record(letter,v).plates:setLoads(letter,v);}
 function sessionId(letter){if(!journal.sessions[letter])journal.sessions[letter]=crypto.randomUUID();return journal.sessions[letter];}
@@ -303,24 +305,28 @@ function endWorkout(letter){
  const entry={id,date:new Date().toISOString(),workout:letter,exercises};journal.logs.push(entry);if(!saveJournal()){journal.logs.pop();return;}render();showHistory();backupToGit();
 }
 function showHistory(){let dialog=document.getElementById('journal-dialog');if(!dialog){dialog=document.createElement('dialog');dialog.id='journal-dialog';dialog.setAttribute('aria-label','יומן אימונים');document.body.append(dialog);}dialog.innerHTML=`<button data-close-journal>סגירה</button><h2>יומן אימונים</h2>${journal.logs.length?'':'<p>עדיין אין אימונים שמורים.</p>'}${[...journal.logs].reverse().map(l=>`<details class="log-entry"><summary>אימון ${escapeHTML(l.workout)} · ${escapeHTML(new Date(l.date).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'}))}</summary>${l.exercises.map(v=>`<div class="log-exercise"><b>${escapeHTML(v.name)}</b>${v.perSide?'<p>לכל צד</p>':''}${v.sets.map((s,i)=>`<p>סט ${i+1} · ${s.done?'✓ בוצע':'לא סומן כבוצע'}<br>${s.load===null?'עומס לא הוזן':escapeHTML(s.load)+' '+escapeHTML(v.unit)} · ${s.reps===null?'ביצוע לא הוזן':escapeHTML(s.reps)+' '+escapeHTML(v.measure)}</p>`).join('')}</div>`).join('')}</details>`).join('')}`;dialog.querySelector('[data-close-journal]').onclick=()=>dialog.close();dialog.showModal();}
-function backupDocument(){return {version:2,weights:loadData,progress:saved,journal};}
+function backupDocument(){return {version:2,weights:loadData,progress:saved,journal,preferences:{readingMode}};}
 document.getElementById('export-data').onclick=()=>{const blob=new Blob([JSON.stringify(backupDocument(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='gym-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 document.getElementById('import-data').onchange=async e=>{const f=e.target.files[0],status=document.getElementById('backup-status');if(!f)return;try{if(f.size>10000000)throw Error('קובץ גדול מדי');const d=JSON.parse(await f.text());if(![1,2].includes(d.version)||!d.weights||typeof d.weights!=='object'||Array.isArray(d.weights))throw Error('קובץ לא מתאים');const validKey=k=>/^[ABC]:[a-zA-Z0-9_]+$/.test(k),num=n=>n===null||(Number.isFinite(n)&&n>=0&&n<=1000);for(const [k,a] of Object.entries(d.weights))if(!validKey(k)||!Array.isArray(a)||a.length!==3||!a.every(n=>num(n)&&n!==null))throw Error('משקלים לא תקינים');
- let next=structuredClone(journal);
- if(d.version===2){const j=d.journal;if(j?.version!==1||!j.records||!j.sessions||!Array.isArray(j.logs))throw Error('יומן לא תקין');for(const [k,r] of Object.entries(j.records))if(!validKey(k)||!['kg','plates'].includes(r.unit)||!['plates','reps','done'].every(p=>Array.isArray(r[p])&&r[p].length===3)||!r.plates.every(num)||!r.reps.every(num)||!r.done.every(x=>typeof x==='boolean'))throw Error('סטים לא תקינים');for(const l of j.logs)if(typeof l.id!=='string'||!Number.isFinite(Date.parse(l.date))||!['A','B','C'].includes(l.workout)||!Array.isArray(l.exercises)||!l.exercises.every(v=>typeof v.name==='string'&&typeof v.unit==='string'&&Array.isArray(v.sets)&&v.sets.every(s=>num(s.load)&&num(s.reps)&&typeof s.done==='boolean')))throw Error('רשומה לא תקינה');next.records={...next.records,...j.records};next.logs=[...new Map([...j.logs,...next.logs].map(l=>[l.id,l])).values()].sort((a,b)=>a.date.localeCompare(b.date));}
- const weights={...loadData,...d.weights};localStorage.setItem(loadStoreKey,JSON.stringify(weights));loadData=weights;localStorage.setItem(journalKey,JSON.stringify(next));journal=next;storageOK=true;render();status.textContent='הגיבוי יובא. המשקלים, החזרות והיומן נשמרו.';
+ let next=structuredClone(journal),nextProgress=structuredClone(saved);
+ if(d.progress){if(!d.progress.done||!d.progress.choices||!Object.entries(d.progress.done).every(([k,v])=>/^[ABC]-\d+$/.test(k)&&typeof v==='boolean')||!Object.entries(d.progress.choices).every(([k,v])=>/^[ABC]-\d+$/.test(k)&&((Number.isInteger(v)&&v>=0&&v<=2)||(typeof v==='string'&&/^[a-zA-Z0-9_]+$/.test(v)))))throw Error('סימוני אימון לא תקינים');nextProgress={done:{...saved.done,...d.progress.done},choices:{...saved.choices,...d.progress.choices}};}
+ if(d.preferences&&!['compact','large','xl'].includes(d.preferences.readingMode))throw Error('גודל כתב לא תקין');
+ if(d.version===2){const j=d.journal;if(j?.version!==1||!j.records||!j.sessions||!Array.isArray(j.logs))throw Error('יומן לא תקין');for(const [k,r] of Object.entries(j.records))if(!validKey(k)||!['kg','plates'].includes(r.unit)||!['plates','reps','done'].every(p=>Array.isArray(r[p])&&r[p].length===3)||!r.plates.every(num)||!r.reps.every(num)||!r.done.every(x=>typeof x==='boolean'))throw Error('סטים לא תקינים');for(const l of j.logs)if(typeof l.id!=='string'||!Number.isFinite(Date.parse(l.date))||!['A','B','C'].includes(l.workout)||!Array.isArray(l.exercises)||!l.exercises.every(v=>typeof v.name==='string'&&typeof v.unit==='string'&&Array.isArray(v.sets)&&v.sets.every(s=>num(s.load)&&num(s.reps)&&typeof s.done==='boolean')))throw Error('רשומה לא תקינה');if(j.notes){if(typeof j.notes!=='object'||Array.isArray(j.notes))throw Error('הערות לא תקינות');for(const [k,n] of Object.entries(j.notes)){if(!/^(workout-[ABC]|exercise-[a-zA-Z0-9_]+)$/.test(k)||typeof n?.text!=='string'||n.text.length>10000||!Number.isFinite(Date.parse(n.updatedAt)))throw Error('הערה לא תקינה');if(!next.notes?.[k]||Date.parse(n.updatedAt)>Date.parse(next.notes[k].updatedAt)){next.notes??={};next.notes[k]=n;}}}
+ for(const [k,id] of Object.entries(j.sessions))if(!['A','B','C'].includes(k)||typeof id!=='string')throw Error('מזהה אימון לא תקין');next.sessions={...next.sessions,...j.sessions};next.records={...next.records,...j.records};next.logs=[...new Map([...j.logs,...next.logs].map(l=>[l.id,l])).values()].sort((a,b)=>a.date.localeCompare(b.date));}
+ const weights={...loadData,...d.weights};localStorage.setItem(loadStoreKey,JSON.stringify(weights));loadData=weights;localStorage.setItem(journalKey,JSON.stringify(next));journal=next;journal.notes??={};saved=nextProgress;persist();if(d.preferences)setReadingMode(d.preferences.readingMode,true);storageOK=true;render();scheduleGitBackup();status.textContent='הגיבוי יובא. הנתונים, ההערות והיומן נשמרו.';
  }catch(err){status.textContent='לא יובא: '+err.message;}e.target.value='';};
 // Ask the browser to protect local data from automatic eviction, when supported.
 document.getElementById('app-menu').addEventListener('click',()=>navigator.storage?.persist?.().catch(()=>{}));
 
 // Optional private backup. Credentials stay in memory and are never exported.
-let gitToken='',gitBusy=false;
-const gitSection=document.createElement('details');gitSection.className='extra';gitSection.innerHTML=`<summary>גיבוי היומן ל־GitHub</summary><p>מומלץ מאגר פרטי נפרד. הזן מפתח גישה רק כאן, לא בצ׳אט. הוא נשאר בזיכרון עד סגירת האפליקציה. לאחר חיבור, סיום אימון מגבה אוטומטית כשיש אינטרנט.</p><label>מאגר <input id="git-repo" dir="ltr" placeholder="owner/repository" autocomplete="off"></label><label>מפתח גישה <input id="git-token" type="password" autocomplete="off"></label><p>המפתח צריך הרשאת Contents: Read and write למאגר שבחרת בלבד.</p><label><input type="checkbox" id="git-public"> אם המאגר ציבורי, אני מסכים שהנתונים יהיו גלויים לכולם</label><button id="git-connect">חיבור וגיבוי עכשיו</button><button id="git-disconnect">ניתוק</button><p id="git-state" role="status">טרם חובר גיבוי GitHub. השמירה המקומית פעילה.</p><p>לשחזור: הורד את קובץ הגיבוי מתיקיית gym-backups במאגר ובחר ״ייבוא גיבוי״. לכל מכשיר קובץ נפרד, כדי שלא ידרוס מכשיר אחר.</p>`;settings.append(gitSection);
+let gitToken='',gitBusy=false,gitTimer=null,gitRevision=0;
+function scheduleGitBackup(){gitRevision++;clearTimeout(gitTimer);if(!gitToken){gitStatus('נשמר במכשיר · לחיבור GitHub פתח אא ← גיבוי כל הנתונים');return;}gitStatus('נשמר במכשיר · ממתין לגיבוי GitHub');gitTimer=setTimeout(backupToGit,8000);}
+const gitSection=document.createElement('details');gitSection.className='extra';gitSection.innerHTML=`<summary>גיבוי כל הנתונים ל־GitHub</summary><p>מומלץ מאגר פרטי נפרד. הזן מפתח גישה רק כאן, לא בצ׳אט. הוא נשאר בזיכרון עד סגירת האפליקציה. לאחר חיבור, כל שינוי במשקלים, חזרות, הערות, בחירת תרגיל וגודל כתב מגובה אוטומטית אחרי כ־8 שניות ללא שינוי, כשיש אינטרנט. היומן נכלל בגיבוי. בפתיחה מחדש יש להתחבר שוב.</p><label>מאגר <input id="git-repo" dir="ltr" placeholder="owner/repository" autocomplete="off"></label><label>מפתח גישה <input id="git-token" type="password" autocomplete="off"></label><p>המפתח צריך הרשאת Contents: Read and write למאגר שבחרת בלבד.</p><label><input type="checkbox" id="git-public"> אם המאגר ציבורי, אני מסכים שהנתונים יהיו גלויים לכולם</label><button id="git-connect">חיבור וגיבוי עכשיו</button><button id="git-disconnect">ניתוק</button><p id="git-state" role="status">טרם חובר גיבוי GitHub. השמירה המקומית פעילה.</p><p>לשחזור: הורד את קובץ הגיבוי מתיקיית gym-backups במאגר ובחר ״ייבוא גיבוי״. לכל מכשיר קובץ נפרד, כדי שלא ידרוס מכשיר אחר.</p>`;settings.append(gitSection);
 try{document.getElementById('git-repo').value=localStorage.getItem('gymBackupRepo-v1')||'';}catch{}
-function gitStatus(text){document.getElementById('git-state').textContent=text;}
+function gitStatus(text){cloudMessage=text;document.getElementById('git-state').textContent=text;document.querySelectorAll('.cloud-save').forEach(el=>el.textContent=text);}
 async function backupToGit(){
  if(gitBusy)return;if(!gitToken){gitStatus('נשמר מקומית. לגיבוי GitHub התחבר עם מפתח גישה.');return;}
- gitBusy=true;
+ clearTimeout(gitTimer);gitBusy=true;let sentRevision=-1,success=false;
  try{
   const repo=document.getElementById('git-repo').value.trim();if(!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo))throw Error('הזן מאגר בפורמט owner/repository');
   const base='https://api.github.com/repos/'+repo,headers={Authorization:'Bearer '+gitToken,Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
@@ -330,15 +336,30 @@ async function backupToGit(){
   let device=localStorage.getItem('gymBackupDevice-v1');if(!device){device=crypto.randomUUID();localStorage.setItem('gymBackupDevice-v1',device);}if(!/^[a-zA-Z0-9-]+$/.test(device))throw Error('מזהה מכשיר לא תקין');
   const url=base+'/contents/gym-backups/'+device+'.json',current=await request(url);let sha;
   if(current.ok)sha=(await current.json()).sha;else if(current.status!==404)throw Error('לא ניתן לקרוא את הגיבוי ('+current.status+')');
-  const bytes=new TextEncoder().encode(JSON.stringify(backupDocument(),null,2));let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);
+  sentRevision=gitRevision;const bytes=new TextEncoder().encode(JSON.stringify(backupDocument(),null,2));let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);
   const upload=await request(url,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:'Save workout backup',content:btoa(binary),...(sha?{sha}:{})})});
   if(!upload.ok)throw Error(upload.status===409?'הגיבוי השתנה בזמן השמירה. נסה שוב.':'הגיבוי נכשל ('+upload.status+'). בדוק הרשאת כתיבה.');
-  localStorage.setItem('gymBackupRepo-v1',repo);gitStatus('✓ גובה ל־GitHub · '+new Date().toLocaleString('he-IL'));
- }catch(e){gitStatus('נשמר מקומית בלבד. '+e.message);}finally{gitBusy=false;}
+  success=true;localStorage.setItem('gymBackupRepo-v1',repo);gitStatus('✓ גובה ל־GitHub · '+new Date().toLocaleString('he-IL'));
+ }catch(e){gitStatus('נשמר מקומית בלבד. '+e.message);}finally{gitBusy=false;if(success&&sentRevision!==gitRevision&&gitToken){gitStatus('נשמר במכשיר · מגבה שינויים נוספים');gitTimer=setTimeout(backupToGit,8000);}}
 }
 document.getElementById('git-connect').onclick=()=>{gitToken=document.getElementById('git-token').value.trim();document.getElementById('git-token').value='';backupToGit();};
-document.getElementById('git-disconnect').onclick=()=>{gitToken='';document.getElementById('git-token').value='';gitStatus('נותק. השמירה המקומית ממשיכה.');};
+document.getElementById('git-disconnect').onclick=()=>{gitToken='';clearTimeout(gitTimer);document.getElementById('git-token').value='';gitStatus('נותק. השמירה המקומית ממשיכה.');};
 addEventListener('online',()=>{if(gitToken)backupToGit();});
+
+// Exercise notes follow stable exercise IDs across workouts and releases.
+journal.notes??={};
+let cloudMessage='נשמר במכשיר · GitHub לא מחובר';
+function noteKey(){const r=route();return r.group===null?'workout-'+r.letter:'exercise-'+DATA.groups[r.group].variants[choice(r.letter,r.group)].id;}
+function render(){
+ renderScreen();
+ const key=noteKey(),note=journal.notes[key];
+ app.insertAdjacentHTML('beforeend',`<section class="page-notes"><label for="page-note">הערות</label><textarea id="page-note" rows="3" maxlength="10000" placeholder="מה לשנות, מה עבד טוב, או משהו לזכור…">${escapeHTML(note?.text||'')}</textarea><p class="note-save" role="status">${storageOK?'נשמר אוטומטית במכשיר':'השמירה המקומית אינה זמינה'}</p><p class="cloud-save" role="status">${escapeHTML(cloudMessage)}</p></section>`);
+}
+document.addEventListener('input',e=>{
+ if(e.target.id!=='page-note')return;
+ journal.notes[noteKey()]={text:e.target.value,updatedAt:new Date().toISOString()};
+ const success=saveJournal();document.querySelector('.note-save').textContent=success?'✓ ההערה נשמרה במכשיר':'לא נשמר — הורד גיבוי לפני סגירה';
+});
 
 
 history.scrollRestoration='manual';
