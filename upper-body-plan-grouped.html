@@ -74,24 +74,13 @@ html:not([data-reading="compact"]) #settings button,html:not([data-reading="comp
 html:not([data-reading="compact"]) #close-settings{position:sticky;top:0;z-index:2}
 @media(max-width:350px){html:not([data-reading="compact"]) .exercise-row{padding:10px 6px}html:not([data-reading="compact"]) .exercise-row .value{font-size:calc(var(--read-number) - 3px)}}
 
-.training-open{display:block;width:100%;min-height:60px;background:#123c43;color:white;border-radius:9px;font-size:22px;font-weight:bold;padding:10px;margin:10px 0}.training-open small{display:block;font-size:17px;font-weight:normal;margin-top:4px}
-#training-view{position:fixed;inset:0;width:100vw;max-width:none;height:100dvh;max-height:none;margin:0;padding:16px;border:0;border-radius:0;background:#fff;color:#102f35;overflow:auto}
-.focus-shell{width:100%;max-width:620px;min-height:calc(100dvh - 32px);margin:auto;display:flex;flex-direction:column;gap:12px;text-align:center}
-.focus-head{display:flex;gap:12px;align-items:center;justify-content:space-between;text-align:right}.focus-head h1{font-size:25px;line-height:1.25}.focus-head button{flex-shrink:0;background:#e4eeee;color:#143b42;font-size:21px;font-weight:bold;min-height:52px;padding:8px 12px;border-radius:8px}
-.focus-phase{font-size:25px;font-weight:bold;background:#e5f3eb;border-radius:8px;padding:8px}.focus-label{display:block;font-size:26px;font-weight:bold}.focus-unit{font-size:23px;line-height:1.25}
-#training-weight{display:block;width:100%;max-width:330px;margin:4px auto;background:#fff;border:3px solid #315e66;border-radius:12px;font:700 clamp(64px,19vw,92px) Arial,sans-serif;line-height:1.1;color:#092c35;text-align:center;direction:ltr;height:clamp(92px,24vw,120px);padding:4px;appearance:textfield}
-#training-weight::-webkit-inner-spin-button,#training-weight::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}#training-weight[aria-invalid]{border-color:#b82727}
-#training-save-state{font-size:18px;color:#31585f;margin-top:5px}.focus-number{font-size:clamp(58px,18vw,90px);font-weight:bold;line-height:1.1;direction:ltr}.focus-bodyweight{font-size:44px;font-weight:bold}.focus-rest-note{font-size:23px;line-height:1.4}
-#training-view .focus-next{margin-top:auto;width:100%;min-height:70px;padding:12px;background:#086762;color:white;border-radius:10px;font-size:26px;font-weight:bold}
-#training-view .warmup{font-size:24px;line-height:1.5;text-align:right;background:#fff5dd;padding:14px}#training-view .warmup small{font-size:20px;line-height:1.4;color:#344b31}
-@media(max-height:680px){.focus-shell{gap:7px}.focus-head h1{font-size:22px}.focus-phase{font-size:22px;padding:5px}.focus-label{font-size:23px}.focus-unit{font-size:20px}#training-save-state{font-size:17px}.focus-number{font-size:58px}#training-weight{height:88px;font-size:65px}#training-view .focus-next{min-height:60px;font-size:24px}}
 
 </style>
 </head>
 <body>
 <header><nav aria-label="בחירת אימון"><a href="#workout-A">A</a><a href="#workout-B">B</a><a href="#workout-C">C</a><button type="button" id="app-menu" class="app-menu" aria-label="גודל כתב, התקנה וגיבוי">אא</button></nav></header>
 <main id="app" tabindex="-1"></main>
-<dialog id="training-view" aria-label="מצב אימון — סט אחד במסך"></dialog>
+
 <dialog id="enlarged" aria-label="איור ביצוע מוגדל"><button type="button" id="close-image">סגירה</button><img alt=""></dialog>
 <dialog id="settings" aria-label="התקנה וגיבוי"><button type="button" id="close-settings">סגירה</button><h2>גודל הכתב</h2><div class="reading-options" role="group" aria-label="בחירת גודל כתב"><button type="button" data-reading-choice="large" aria-pressed="true">כתב גדול</button><button type="button" data-reading-choice="xl" aria-pressed="false">כתב גדול מאוד</button><button type="button" data-reading-choice="compact" aria-pressed="false">תצוגה קומפקטית</button></div><p id="reading-status" role="status"></p><h2>האימון שלי בטלפון</h2><p id="install-help"></p><button id="install-app" type="button" hidden>התקנת האפליקציה</button><p id="offline-status" role="status"></p><h2>המשקלים שלך</h2><p>נשמרים אוטומטית במכשיר הזה, בנפרד לכל אימון ולכל חלופה. ״אימון חדש״ מאפס רק סימוני השלמה.</p><p class="settings-note">מחיקת נתוני הדפדפן או החלפת טלפון/כתובת עלולות למחוק את המשקלים. לפני מעבר מהקובץ לאפליקציה, הורד גיבוי וייבא אותו באפליקציה.</p><button type="button" id="export-data">הורדת גיבוי משקלים</button> <label class="file-button">ייבוא משקלים מגיבוי<input type="file" id="import-data" accept="application/json,.json"></label><p id="backup-status" role="status"></p></dialog>
 <script>
@@ -131,7 +120,7 @@ function render(){
     return;
   }
   const group=DATA.groups[r.group],index=choice(r.letter,r.group),v=group.variants[index],sets=workout.rows.find(row=>row[0]===r.group)[1],done=saved.done[rowKey(r.letter,r.group)];
-  app.innerHTML=`<div class="exercise-toolbar"><button class="back" data-back>→ חזרה לאימון ${r.letter}</button><span class="muscle">${escapeHTML(group.title)}</span></div><div class="variant-tabs" role="tablist" aria-label="בחירת תרגיל חלופי">${group.variants.map((variant,i)=>`<button role="tab" id="variant-tab-${i}" aria-controls="variant-panel" aria-selected="${i===index}" tabindex="${i===index?0:-1}" data-variant="${i}">${escapeHTML(variant.tab)}</button>`).join('')}</div><section id="variant-panel" role="tabpanel" aria-labelledby="variant-tab-${index}"><h1 class="exercise-title">${escapeHTML(v.name)}</h1><button type="button" class="training-open" data-training-open>מצב אימון<small>סט אחד · מספרים ענקיים</small></button><div class="dose"><span><b>${sets}</b> סטים</span><span>${range(v.reps.split(' ')[0])} ${v.reps.includes('שניות')?'שנ׳':'חזרות'}${v.reps.includes('לכל צד')?' לכל צד':''}</span><span>מנוחה ${range(group.rest)} שנ׳</span></div>${weightsPanel(r.letter,v,sets)}<figure class="figure"><button class="zoom" data-zoom aria-label="הגדלת איורי הביצוע"><img src="${v.image}" alt="שני שלבי ביצוע של ${escapeHTML(v.name)}"></button><figcaption class="phases"><span>1 · התחלה</span><span>2 · תנועה</span></figcaption><div class="zoom-note">לחיצה על האיור להגדלה</div></figure><div class="instructions"><p><b>התמקמות:</b> ${escapeHTML(v.setup)}</p><p><b>1.</b> ${escapeHTML(v.first)}</p><p><b>2.</b> ${escapeHTML(v.second)}</p></div><p class="cue">${escapeHTML(v.cue)}</p>${v.id==='v3_pallof_oblique'?DATA.diagram:''}${v.note?`<details class="extra"><summary>מה שונה בחלופה הזו?</summary><p>${escapeHTML(v.note)}</p></details>`:''}</section><button class="finish ${done?'finished':''}" data-finish>${done?'✓ הושלם · ביטול הסימון':'סיימתי את התרגיל ✓'}</button>`;
+  app.innerHTML=`<div class="exercise-toolbar"><button class="back" data-back>→ חזרה לאימון ${r.letter}</button><span class="muscle">${escapeHTML(group.title)}</span></div><div class="variant-tabs" role="tablist" aria-label="בחירת תרגיל חלופי">${group.variants.map((variant,i)=>`<button role="tab" id="variant-tab-${i}" aria-controls="variant-panel" aria-selected="${i===index}" tabindex="${i===index?0:-1}" data-variant="${i}">${escapeHTML(variant.tab)}</button>`).join('')}</div><section id="variant-panel" role="tabpanel" aria-labelledby="variant-tab-${index}"><h1 class="exercise-title">${escapeHTML(v.name)}</h1><div class="dose"><span><b>${sets}</b> סטים</span><span>${range(v.reps.split(' ')[0])} ${v.reps.includes('שניות')?'שנ׳':'חזרות'}${v.reps.includes('לכל צד')?' לכל צד':''}</span><span>מנוחה ${range(group.rest)} שנ׳</span></div>${weightsPanel(r.letter,v,sets)}<figure class="figure"><button class="zoom" data-zoom aria-label="הגדלת איורי הביצוע"><img src="${v.image}" alt="שני שלבי ביצוע של ${escapeHTML(v.name)}"></button><figcaption class="phases"><span>1 · התחלה</span><span>2 · תנועה</span></figcaption><div class="zoom-note">לחיצה על האיור להגדלה</div></figure><div class="instructions"><p><b>התמקמות:</b> ${escapeHTML(v.setup)}</p><p><b>1.</b> ${escapeHTML(v.first)}</p><p><b>2.</b> ${escapeHTML(v.second)}</p></div><p class="cue">${escapeHTML(v.cue)}</p>${v.id==='v3_pallof_oblique'?DATA.diagram:''}${v.note?`<details class="extra"><summary>מה שונה בחלופה הזו?</summary><p>${escapeHTML(v.note)}</p></details>`:''}</section><button class="finish ${done?'finished':''}" data-finish>${done?'✓ הושלם · ביטול הסימון':'סיימתי את התרגיל ✓'}</button>`;
   document.title=v.name+' · אימון '+r.letter;
 }
 document.addEventListener('click',event=>{
@@ -252,50 +241,6 @@ function setReadingMode(mode,save=false){
 document.querySelectorAll('[data-reading-choice]').forEach(button=>button.addEventListener('click',()=>setReadingMode(button.dataset.readingChoice,true)));
 setReadingMode(readingMode);
 
-const trainingDialog=document.getElementById('training-view');
-let training=null;
-function showTraining(){
- const r=route();if(r.group===null)return;
- const v=DATA.groups[r.group].variants[choice(r.letter,r.group)];
- const sets=DATA.workouts.find(w=>w.letter===r.letter).rows.find(row=>row[0]===r.group)[1];
- training={letter:r.letter,group:r.group,variant:v,sets,index:0,phase:warmupPanel(r.letter,v)?'warmup':'set'};
- renderTraining();trainingDialog.showModal();
-}
-function renderTraining(){
- const t=training,v=t.variant;
- let content='';
- if(t.phase==='warmup'){
-  content=`<div class="focus-phase">לפני שמתחילים</div><div class="focus-warmup">${warmupPanel(t.letter,v)}</div><button class="focus-next" data-training-action="start">לסט הראשון ←</button>`;
- }else if(t.phase==='rest'){
-  content=`<div class="focus-phase">סט ${t.index+1} הושלם</div><div class="focus-label">מנוחה</div><div class="focus-number">${range(DATA.groups[t.group].rest)}</div><div class="focus-unit">שניות</div><p class="focus-rest-note">המשך כשאתה מוכן לסט הבא</p><button class="focus-next" data-training-action="next">מתחיל סט ${t.index+2} ←</button>`;
- }else{
-  const kg=setLoads(t.letter,v)[t.index];
-  content=`<div class="focus-phase">סט ${t.index+1} מתוך ${t.sets}</div><div class="focus-weight"><label class="focus-label" for="training-weight">${v.load.body?'':'משקל'}</label>${v.load.body?'<div class="focus-bodyweight">משקל גוף</div>':`<input id="training-weight" data-load="${t.index}" type="number" inputmode="decimal" min="0" max="1000" step="0.5" value="${kg}" aria-label="משקל לסט ${t.index+1}, ${escapeHTML(v.load.unit)}">`}<div class="focus-unit">${escapeHTML(v.load.unit)}</div><div id="training-save-state" role="status">${Object.hasOwn(loadData,loadKey(t.letter,v))?'המשקל השמור שלך':'הצעת התחלה · ניתן לשנות'}</div></div><div class="focus-reps"><div class="focus-label">${v.reps.includes('שניות')?'זמן':'חזרות'}</div><div class="focus-number">${range(v.reps.split(' ')[0])}</div><div class="focus-unit">${v.reps.includes('שניות')?'שניות ':''}${v.reps.includes('לכל צד')?'לכל צד':''}</div></div><button class="focus-next" data-training-action="done">${t.index+1===t.sets?'סיימתי את התרגיל ✓':'סיימתי סט '+(t.index+1)+' ✓'}</button>`;
- }
- trainingDialog.innerHTML=`<div class="focus-shell"><div class="focus-head"><h1>${escapeHTML(v.rowName)}</h1><button type="button" data-training-close aria-label="סגירת מצב אימון וחזרה לפירוט">חזרה</button></div>${content}</div>`;
- trainingDialog.scrollTop=0;
- const next=trainingDialog.querySelector('.focus-next');if(trainingDialog.open)next.focus({preventScroll:true});
-}
-document.addEventListener('click',event=>{
- if(event.target.closest('[data-training-open]')){showTraining();return;}
- if(event.target.closest('[data-training-close]')){trainingDialog.close();return;}
- const action=event.target.closest('[data-training-action]')?.dataset.trainingAction;
- if(!action||!training)return;
- if(action==='start')training.phase='set';
- if(action==='next'){training.index++;training.phase='set';}
- if(action==='done'){
-  const input=trainingDialog.querySelector('[data-load]');
-  if(input&&(input.getAttribute('aria-invalid')==='true'||input.value==='')){input.focus();return;}
-  if(training.index+1===training.sets){saved.done[rowKey(training.letter,training.group)]=true;persist();trainingDialog.close();back();return;}
-  training.phase='rest';
- }
- renderTraining();
-});
-document.addEventListener('input',event=>{
- if(!trainingDialog.contains(event.target)||!event.target.matches('[data-load]'))return;
- document.getElementById('training-save-state').textContent=document.getElementById('save-state').textContent;
-});
-trainingDialog.addEventListener('close',()=>{render();});
 
 history.scrollRestoration='manual';
 if(!location.hash || (!/^#workout-[ABC]$/.test(location.hash)&&!/^#exercise-[ABC]-\d+$/.test(location.hash)))history.replaceState({y:0},'','#workout-A');
