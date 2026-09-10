@@ -1,0 +1,26 @@
+{
+  "id": "./",
+  "name": "האימון שלי · A B C",
+  "short_name": "האימון שלי",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "./upper-body-plan-grouped.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#edf3f3",
+  "theme_color": "#143e45",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
